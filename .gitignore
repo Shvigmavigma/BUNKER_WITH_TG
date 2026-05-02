@@ -1,0 +1,29 @@
+# Зависимости
+node_modules/
+/my-vue-project/node_modules/
+
+# Виртуальное окружение (если используется)
+venv/
+env/
+.venv/
+
+# Кэш Python
+__pycache__/
+*.pyc
+
+# Файлы окружения
+.env
+.env.local
+
+# Логи
+*.log
+
+# Редакторы и IDE
+.vscode/
+.idea/
+uploads/*.mp4
+uploads/*.mp3
+uploads/*.ogg
+uploads/*.avi
+uploads/*.mov
+!uploads/.gitkeep
