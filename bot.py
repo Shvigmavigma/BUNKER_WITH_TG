@@ -13,43 +13,60 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
 logger = logging.getLogger(__name__)
+
 # ===== POKER ==========
 async def poker_rules(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = ("""Классический покер с раздачей двух карт, известный как Техасский Холдем, начинается с того, что двое игроков слева от баттона (дилера) делают обязательные ставки вслепую — малый и большой блайнды. После этого каждый участник получает две закрытые карты, которые видит только он. Первый круг торговли (префлоп) открывает игрок, сидящий сразу за большим блайндом, и продолжается по часовой стрелке. Каждый игрок может сбросить карты (фолд), уравнять текущую ставку (колл) или повысить её (рейз). Когда раунд завершён и все ставки выровнены, на стол выкладываются три общие карты лицом вверх — это флоп. Следующий круг торговли начинается с первого активного игрока слева от баттона; здесь доступны чек (пропуск хода, если нет активной ставки), бет, колл, рейз или фолд. Далее открывается четвёртая общая карта (терн), и снова происходит торговля. Наконец, на стол кладётся пятая общая карта (ривер), после чего проходит последний раунд торговли. Если после ривера остаётся два или более игроков, происходит вскрытие карт: участники составляют лучшую пятикарточную комбинацию из семи доступных карт (двух своих и пяти общих). Победитель определяется по старшинству комбинаций: от старшего флеш-рояля и стрит-флеша до пары и старшей карты. В случае равенства банк делится поровну. На протяжении всей игры дилерская позиция перемещается по кругу, обеспечивая смену порядка хода и обязательных блайндов."""
+    text = (
+        "Классический покер с раздачей двух карт, известный как Техасский Холдем, начинается с того, что двое игроков слева от баттона (дилера) делают обязательные ставки вслепую — малый и большой блайнды. После этого каждый участник получает две закрытые карты, которые видит только он. Первый круг торговли (префлоп) открывает игрок, сидящий сразу за большим блайндом, и продолжается по часовой стрелке. Каждый игрок может сбросить карты (фолд), уравнять текущую ставку (колл) или повысить её (рейз). Когда раунд завершён и все ставки выровнены, на стол выкладываются три общие карты лицом вверх — это флоп. Следующий круг торговли начинается с первого активного игрока слева от баттона; здесь доступны чек (пропуск хода, если нет активной ставки), бет, колл, рейз или фолд. Далее открывается четвёртая общая карта (терн), и снова происходит торговля. Наконец, на стол кладётся пятая общая карта (ривер), после чего проходит последний раунд торговли. Если после ривера остаётся два или более игроков, происходит вскрытие карт: участники составляют лучшую пятикарточную комбинацию из семи доступных карт (двух своих и пяти общих). Победитель определяется по старшинству комбинаций: от старшего флеш-рояля и стрит-флеша до пары и старшей карты. В случае равенства банк делится поровну. На протяжении всей игры дилерская позиция перемещается по кругу, обеспечивая смену порядка хода и обязательных блайндов."
     )
     await update.message.reply_text(text, parse_mode="Markdown")
-    
+
 async def poker_combines(update: Update, context: ContextTypes.DEFAULT_TYPE):
-     await update.message.reply_text("5 секунд ...", parse_mode="Markdown")
-     with open('poker-combinaciyi.jpg', 'rb') as photo:
-            await update.message.reply_photo(photo)
+    await update.message.reply_text("5 секунд ...", parse_mode="Markdown")
+    with open('poker-combinaciyi.jpg', 'rb') as photo:
+        await update.message.reply_photo(photo)
+
 # ===== ХРАНИЛИЩЕ КАРТОЧЕК =====
 PACKS_DIR = "cards"
 packs = {}
 used_cards = {}
 user_cards = {}
-active_pack = "pack1"
+active_pack = "pack1"   # значение по умолчанию, может быть изменено /setpack
 
 def load_packs():
+    """Загружает все паки из всех подпапок каталога PACKS_DIR."""
     global packs, used_cards
     packs.clear()
     used_cards.clear()
-    for i in range(1, 5):
-        pack_name = f"pack{i}"
-        pack_dir = os.path.join(PACKS_DIR, pack_name)
-        if not os.path.isdir(pack_dir):
-            logger.error(f"Папка {pack_dir} не найдена!")
-            continue
+
+    # Проверяем, что базовая папка существует
+    if not os.path.isdir(PACKS_DIR):
+        logger.error(f"Папка '{PACKS_DIR}' не найдена!")
+        return
+
+    # Сканируем все подпапки
+    for folder_name in os.listdir(PACKS_DIR):
+        folder_path = os.path.join(PACKS_DIR, folder_name)
+        if not os.path.isdir(folder_path):
+            continue   # пропускаем файлы, нужны только папки
+
+        # Собираем все .png в этой подпапке
         images = sorted([
-            os.path.join(pack_dir, f)
-            for f in os.listdir(pack_dir)
+            os.path.join(folder_path, f)
+            for f in os.listdir(folder_path)
             if f.lower().endswith('.png')
         ])
-        if len(images) != 10:
-            logger.warning(f"В паке {pack_name} ожидалось 10 PNG, загружено {len(images)}")
-        packs[pack_name] = images
-        used_cards[pack_name] = set()
-    logger.info(f"Загружено паков: {list(packs.keys())}")
+
+        if len(images) == 0:
+            logger.warning(f"В паке '{folder_name}' нет PNG-файлов, пропускаем.")
+            continue
+
+        packs[folder_name] = images
+        used_cards[folder_name] = set()
+        logger.info(f"Загружен пак '{folder_name}': {len(images)} карточек")
+
+    if not packs:
+        logger.error("Не загружено ни одного пака. Проверьте папку 'cards' с подпапками.")
 
 def reset_game_state():
     global user_cards
@@ -67,18 +84,24 @@ async def set_pack(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Нет прав.")
         return
     try:
-        num = int(context.args[0])
-        if num < 1 or num > 4:
-            raise ValueError
-    except (IndexError, ValueError):
-        await update.message.reply_text("Использование: /setpack 1-4")
+        pack_name = context.args[0]
+    except IndexError:
+        await update.message.reply_text("Использование: /setpack <имя пака> (например, pack1, test)")
         return
+
+    # Для обратной совместимости: если передано число, преобразуем в "packX"
+    if pack_name.isdigit():
+        pack_name = f"pack{pack_name}"
+
     global active_pack
-    new_pack = f"pack{num}"
-    if new_pack not in packs:
-        await update.message.reply_text(f"Пак {new_pack} не загружен. Сначала /refresh.")
+    if pack_name not in packs:
+        await update.message.reply_text(
+            f"Пак '{pack_name}' не найден. Доступные паки: {', '.join(packs.keys())}.\n"
+            "Совет: сначала выполните /refresh."
+        )
         return
-    active_pack = new_pack
+
+    active_pack = pack_name
     reset_game_state()
     await update.message.reply_text(f"✅ Активный пак изменён на **{active_pack}**.\nВсе выданные карточки сброшены.", parse_mode="Markdown")
 
@@ -89,6 +112,7 @@ async def refresh(update: Update, context: ContextTypes.DEFAULT_TYPE):
     load_packs()
     reset_game_state()
     global active_pack
+    # Если текущий активный пак исчез, берём первый доступный
     if active_pack not in packs:
         active_pack = next(iter(packs.keys()), "pack1")
     await update.message.reply_text(f"🔄 Паки перезагружены. Активный пак: **{active_pack}**.", parse_mode="Markdown")
@@ -104,8 +128,9 @@ async def admin_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user.id):
         await update.message.reply_text("❌ Нет прав.")
         return
-    avail = len(packs.get(active_pack, [])) - len(used_cards.get(active_pack, set()))
-    await update.message.reply_text(f"📦 Пак: **{active_pack}**\n🃏 Осталось: {avail}/10", parse_mode="Markdown")
+    total = len(packs.get(active_pack, []))
+    used = len(used_cards.get(active_pack, set()))
+    await update.message.reply_text(f"📦 Пак: **{active_pack}**\n🃏 Осталось: {total - used}/{total}", parse_mode="Markdown")
 
 # ===== КОМАНДЫ ИГРОКОВ =====
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -180,7 +205,7 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
 def main():
     load_packs()
     if not packs:
-        logger.error("Не загружено ни одного пака. Проверьте папку 'cards' с подпапками pack1..4.")
+        logger.error("Не загружено ни одного пака. Проверьте папку 'cards' с подпапками.")
         return
 
     global active_pack
