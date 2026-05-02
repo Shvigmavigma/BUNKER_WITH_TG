@@ -13,7 +13,16 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
 logger = logging.getLogger(__name__)
-
+# ===== POKER ==========
+async def poker_rules(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = ("""Классический покер с раздачей двух карт, известный как Техасский Холдем, начинается с того, что двое игроков слева от баттона (дилера) делают обязательные ставки вслепую — малый и большой блайнды. После этого каждый участник получает две закрытые карты, которые видит только он. Первый круг торговли (префлоп) открывает игрок, сидящий сразу за большим блайндом, и продолжается по часовой стрелке. Каждый игрок может сбросить карты (фолд), уравнять текущую ставку (колл) или повысить её (рейз). Когда раунд завершён и все ставки выровнены, на стол выкладываются три общие карты лицом вверх — это флоп. Следующий круг торговли начинается с первого активного игрока слева от баттона; здесь доступны чек (пропуск хода, если нет активной ставки), бет, колл, рейз или фолд. Далее открывается четвёртая общая карта (терн), и снова происходит торговля. Наконец, на стол кладётся пятая общая карта (ривер), после чего проходит последний раунд торговли. Если после ривера остаётся два или более игроков, происходит вскрытие карт: участники составляют лучшую пятикарточную комбинацию из семи доступных карт (двух своих и пяти общих). Победитель определяется по старшинству комбинаций: от старшего флеш-рояля и стрит-флеша до пары и старшей карты. В случае равенства банк делится поровну. На протяжении всей игры дилерская позиция перемещается по кругу, обеспечивая смену порядка хода и обязательных блайндов."""
+    )
+    await update.message.reply_text(text, parse_mode="Markdown")
+    
+async def poker_combines(update: Update, context: ContextTypes.DEFAULT_TYPE):
+     await update.message.reply_text("5 секунд ...", parse_mode="Markdown")
+     with open('poker-combinaciyi.jpg', 'rb') as photo:
+            await update.message.reply_photo(photo)
 # ===== ХРАНИЛИЩЕ КАРТОЧЕК =====
 PACKS_DIR = "cards"
 packs = {}
@@ -129,7 +138,9 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Команды:\n"
         "/start – получить карточку\n"
         "/mycard – показать свою карточку\n"
-        "/help – эта справка"
+        "/help – эта справка\n"
+        "/pokerrules - правила покера\n"
+        "/pokercombines - комбинации покера"
     )
     await update.message.reply_text(text, parse_mode="Markdown")
 
@@ -187,6 +198,8 @@ def main():
     application.add_handler(CommandHandler("resetgame", reset_game))
     application.add_handler(CommandHandler("status", admin_status))
     application.add_handler(CallbackQueryHandler(get_card_callback, pattern="^get_card$"))
+    application.add_handler(CommandHandler("pokerrules", poker_rules))
+    application.add_handler(CommandHandler("pokercombines", poker_combines))
     application.add_error_handler(error_handler)
 
     logger.info(f"Бот запущен. Активный пак: {active_pack}")
